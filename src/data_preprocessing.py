@@ -14,11 +14,19 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder, S
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 
-class DataPipeline():
+class DataPipeline:
 
     def __init__(self):
         self.pl = None
         self.tc =None
+
+    def full_cleanup(self,data_path:str,columns:List[str],save:bool=True) -> DataFrame:
+        df = self._basic_cleanup(data_path)
+        df = self._feature_engineering(df)
+        df_clean = self._skew_adjustment(df,columns)
+        if save:
+            df_clean.to_csv("data/clean/full_clean.csv")
+        return df_clean
 
     @staticmethod
     def _basic_cleanup(data_path:str)->DataFrame:
@@ -48,19 +56,31 @@ class DataPipeline():
             df[column] = np.log1p(df[column])
         return df
 
-
-    def full_cleanup(self,data_path:str,columns:List[str],save:bool=True) -> DataFrame:
-        df = self._basic_cleanup(data_path)
-        df = self._feature_engineering(df)
-        df_clean = self._skew_adjustment(df,columns)
+    
+    def prepare_train_test(self,df:DataFrame,test_size=0.2,random_state=123,shuffle=True,save=True)-> Tuple[DataFrame,DataFrame]:
+        train_data, test_data = train_test_split(df, test_size = test_size, random_state=random_state, shuffle=shuffle)
         if save:
-            df_clean.to_csv("data/clean/full_clean.csv")
-        return df_clean
+            train_data.to_csv("data/clean/train.csv")
+            test_data.to_csv("data/clean/test.csv")
+        return train_data, test_data
+
+    def transform_train_data(self,train_df:DataFrame=None,train_df_path:str=None):
+        if train_df_path:
+             train_df = pd.read_csv(train_df_path)
+
+        X_train = train_df.drop(["price"], axis=1)
+        y_train = train_df['price']
+
+        # transform data
+        X_train = self._pre_process_train(X_train)
+        return X_train, y_train
 
     def _pre_process_train(self,X_train:DataFrame)->DataFrame:
-        numeric_features = ["latitude","longitude","availability_365","calculated_host_listings_count","minimum_nights","number_of_reviews","reviews_per_month"]
+        passthrough_features = ["longitude","latitude","all_year_avail","low_avail","no_reviews"]
+        numeric_features = ["availability_365","calculated_host_listings_count","minimum_nights","number_of_reviews","reviews_per_month"]
         ordinal_features = ['room_type']
         nominal_features = [ "neighbourhood_group","neighbourhood"]
+
 
         numeric_transformer = Pipeline(
             [
@@ -83,7 +103,7 @@ class DataPipeline():
         preprocessor = ColumnTransformer(
             transformers=[("numeric", numeric_transformer, numeric_features),
                           ("nominal", nominal_transformer, nominal_features),
-                          ("ordinal", ordinal_transformer, ordinal_features)])
+                          ("ordinal", ordinal_transformer, ordinal_features)],remainder='passthrough')
         
         pipeline = Pipeline(
         [
@@ -98,12 +118,23 @@ class DataPipeline():
         
         
         self.tc = (numeric_features + list(preprocessor.named_transformers_['nominal'].named_steps['onehot'].get_feature_names(nominal_features)) +
-                            ordinal_features)
+                            ordinal_features + passthrough_features )
 
         X_train = pd.DataFrame(X_train, columns = self.tc)
         
         
         return X_train
+
+    def transform_test_data(self,test_df:DataFrame=None,test_df_path:str=None):
+        if test_df_path:
+             test_df = pd.read_csv(test_df_path)
+
+        X_test = test_df.drop(["price"], axis=1)
+        y_test = test_df['price']
+
+        # transform data
+        X_test = self._pre_process_test(X_test)
+        return X_test, y_test
 
     def _pre_process_test(self,X_test):
     
@@ -113,34 +144,8 @@ class DataPipeline():
        
         return X_test
     
-    def transform_train_data(self,train_df:DataFrame=None,train_df_path:str=None):
-        if train_df_path:
-             train_df = pd.read_csv(train_df_path)
-
-        X_train = train_df.drop(["price"], axis=1)
-        y_train = train_df['price']
-
-        # transform data
-        X_train = self._pre_process_train(X_train)
-        
-        return X_train, y_train
-    
-
-    def transform_test_data(self,test_df:DataFrame=None,test_df_path:str=None):
-        if test_df_path:
-             test_df = pd.read_csv(test_df_path)
-        X_test = test_df.drop(["price"], axis=1)
-        y_test = test_df['price']
-
-        # transform data
-        X_test = self._pre_process_test(X_test)
-      
-        return X_test, y_test
 
     
-    def prepare_train_test(self,df:DataFrame,test_size=0.2,random_state=123,shuffle=True,save=True)-> Tuple[DataFrame,DataFrame]:
-        train_data, test_data = train_test_split(df, test_size = test_size, random_state=random_state, shuffle=shuffle)
-        if save:
-            train_data.to_csv("data/clean/train.csv")
-            test_data.to_csv("data/clean/test.csv")
-        return train_data, test_data
+
+ 
+
