@@ -1,0 +1,24 @@
+# Model Params
+params:
+  model: "RandomForestRegressor"
+  RFECV: 0
+  feature_select: 1
+  min_feature: 10
+  best_params:
+    n_estimators: 1200
+    min_samples_split: 2
+    min_samples_leaf: 4
+    max_features: "auto"
+    max_depth: 100
+    bootstrap: True
+# Data Params
+DIR_RAW: "data/raw"
+DIR_CLEAN: "data/clean"
+data_path: "data/raw/AB_NYC_2019.csv"
+data_set: "dgomonov/new-york-city-airbnb-open-data"
+test_size: 0.2
+columns_to_skew:
+  - "price"
+
+download_data_set: True
+run_pipeline: False

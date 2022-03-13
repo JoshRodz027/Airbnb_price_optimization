@@ -82,13 +82,12 @@ class Model:
         self.feature_select = None
         self.n_fold = 5
         self.model_eval = ModelEvaluator()
-        self.feature_to_remove = None
+        self.features_to_remove = None
             
 
 
     def train(self, params:Dict[str,Union[str,int]], X_train:DataFrame, y_train:DataFrame,min_feature:int=None)-> Union[float,float,float,float]:
         self.model = self.models[params.pop("model")] #.pop removes the setting/dict thats left in model 
-        best_params = params["best_params"]
 
         # extract non model related args
         is_rfecv = (("RFECV" in params.keys()) and (params.pop("RFECV")==1))
@@ -107,10 +106,11 @@ class Model:
             if min_feature ==None:
                 print("min_feature not detected. Setting default to 15")
                 min_feature = 15
-            X_train = self.feature_selection_process(self.model,X_train,y_train,min_feature)
+            X_train = self.feature_selection_process(X_train,y_train,min_feature)
 
         if "best_params" in params.keys():
             print("Applying best_params to model")
+            best_params = params["best_params"]
             self.model.set_params(**best_params)
         else:
             self.model.set_params(**params)
@@ -126,10 +126,12 @@ class Model:
         # Preparing RMSLE
         rmlse = self.model_eval.rmlse(y_train,y_pred_train)
         print (f"RMSLE Value is :{rmlse} ")
+ 
         # Preparing rmsw_w_cv
-        numerical_features =['latitude', 'longitude', 'minimum_nights', 'number_of_reviews',
-       'reviews_per_month', 'calculated_host_listings_count',
-       'availability_365', 'all_year_avail', 'low_avail', 'no_reviews']
+        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+        newdf = X_train.select_dtypes(include=numerics)
+        numerical_features = newdf.columns
+        print(f"detected {len(numerical_features)} numeric features ")
         rmse_w_cv = self.model_eval.rmse_cv(self.model,numerical_features,X_train,y_train)
         print(f"rmse_w_cv score is :{rmse_w_cv}")
         # R2 score 
@@ -151,14 +153,7 @@ class Model:
 
 
 
-    def evaluate(self, X_test:DataFrame, y_test:DataFrame)->Union[float,float,float,float]:
-        """
-        Description of the function. 
-        
-        :param X_test: ......
-        :param y_test: ......
-        :return: ......
-        """
+    def evaluate(self, X_test:DataFrame, y_test:DataFrame) -> Union[float,float,float,float]:
         #For RFE
         if self.rfecv!= None:
             print("rfecv done on testing data")
@@ -166,16 +161,22 @@ class Model:
 
         if self.feature_select != None:
             print("feature_select starting on testing data")
-            X_test = self.feature_selection_process(X_test)
-
+            print(f"Dropping {len(self.features_to_remove)} features from X_test")
+            X_test= X_test.drop(self.features_to_remove, axis=1)
+            
+        print('Parameters currently in use: \n')
+        pprint(self.model.get_params())
         # This should use the trained model to predict the target for the test_data and return the test mse  
         y_pred_test = self.model.predict(X_test)
         mse_test = mean_squared_error(y_test,y_pred_test)
         print(f"mse_test score is :{mse_test}")
+
+
         # Preparing rmsw_w_cv
-        numerical_features =['latitude', 'longitude', 'minimum_nights', 'number_of_reviews',
-       'reviews_per_month', 'calculated_host_listings_count',
-       'availability_365', 'all_year_avail', 'low_avail', 'no_reviews']
+        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+        newdf = X_test.select_dtypes(include=numerics)
+        numerical_features = newdf.columns
+        print(f"detected {len(numerical_features)} numeric features ")
         rmse_w_cv = self.model_eval.rmse_cv(self.model,numerical_features,X_test,y_test)
         print(f"rmse_w_cv score is :{rmse_w_cv}")
 
@@ -187,18 +188,19 @@ class Model:
         return mse_test,rmse_w_cv, r_sqr, rmlse
     
 
-    def feature_selection_process(self,model,X_train:DataFrame,y_train:DataFrame,min_feature:int)->DataFrame:
+    def feature_selection_process(self,X_train:DataFrame,y_train:DataFrame,min_feature:int)->DataFrame:
         feat_ranks = {}
         feature_names = X_train.columns
         print(f"Fitting model {self.model} for feature selection of minimum {min_feature} features")
         self.model.fit(X_train,y_train)
         ranks = self.ranking(self.model.feature_importances_, feature_names)
-        sorted_dict = self.dict_sorter(ranks)
+        sorted_dict ,sorted_keys = self.dict_sorter(ranks)
         forest_importances = pd.Series(self.model.feature_importances_, index=feature_names)
         forest_importances= forest_importances.sort_values(ascending=False)
-
+        self.features_to_remove = sorted_keys[min_feature:]
+        print(f"number of features to drop {len(self.features_to_remove)}")
         print("Dropping features now..")
-
+        X_train_reduced = X_train.drop(self.features_to_remove, axis=1)
         return X_train_reduced
 
 
@@ -210,12 +212,12 @@ class Model:
         return dict(zip(names, ranks))
 
     @staticmethod
-    def dict_sorter(rank_dict:dict)->dict:
+    def dict_sorter(rank_dict:dict)->Union[dict, List[str]]:
         sorted_keys  = sorted(rank_dict, key=rank_dict.get, reverse=True)
         print(f"Top 10 features {sorted_keys[:10]}")
         sorted_dict = {}
         for w in sorted_keys:
             sorted_dict[w] = rank_dict[w]
-        return sorted_dict
+        return sorted_dict , sorted_keys
 
 
