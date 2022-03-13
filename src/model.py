@@ -67,7 +67,7 @@ class Model:
         # init your model here 
         # Regressor is used to predict continuous values like price, where classifier is used to preduict discret value like gender.
         self.models = {'DecisionTreeRegressor': DecisionTreeRegressor(),
-                  'RandomForestRegressor': RandomForestRegressor(random_state=42),
+                  'RandomForestRegressor': RandomForestRegressor(random_state=0),
                   'LinearRegression': LinearRegression(),
                   'KNeighborsRegressor': KNeighborsRegressor(),
                   "GradientBoostingRegressor": GradientBoostingRegressor(),
@@ -88,7 +88,8 @@ class Model:
 
     def train(self, params:Dict[str,Union[str,int]], X_train:DataFrame, y_train:DataFrame,min_feature:int=None)-> Union[float,float,float,float]:
         self.model = self.models[params.pop("model")] #.pop removes the setting/dict thats left in model 
-        
+        best_params = params["best_params"]
+
         # extract non model related args
         is_rfecv = (("RFECV" in params.keys()) and (params.pop("RFECV")==1))
         is_feat_select = (("feature_select" in params.keys()) and (params.pop("feature_select")==1))
@@ -108,10 +109,14 @@ class Model:
                 min_feature = 15
             X_train = self.feature_selection_process(self.model,X_train,y_train,min_feature)
 
-        self.model.set_params(**params)
+        if "best_params" in params.keys():
+            print("Applying best_params to model")
+            self.model.set_params(**best_params)
+        else:
+            self.model.set_params(**params)
         print('Parameters currently in use: \n')
         pprint(self.model.get_params())
-        # Your implementation goes here
+       
         
         self.model.fit(X_train, y_train)
         y_pred_train = self.model.predict(X_train)
