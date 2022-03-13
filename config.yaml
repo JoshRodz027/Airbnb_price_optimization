@@ -1,8 +1,10 @@
 # Model Params
+use_default_params: True
+
 params:
   model: "RandomForestRegressor"
-  RFECV: 0
-  feature_select: 1
+  RFECV: False
+  feature_select: True
   min_feature: 10
   best_params:
     n_estimators: 1200
@@ -11,6 +13,11 @@ params:
     max_features: "auto"
     max_depth: 100
     bootstrap: True
+
+default_params:
+  model: "RandomForestRegressor"
+  
+
 # Data Params
 DIR_RAW: "data/raw"
 DIR_CLEAN: "data/clean"
@@ -20,5 +27,5 @@ test_size: 0.2
 columns_to_skew:
   - "price"
 
-download_data_set: True
-run_pipeline: False
+download_data_set: False
+run_pipeline: True

@@ -15,7 +15,12 @@ if __name__=="__main__":
         params = yaml.load(file, Loader=yaml.FullLoader)
     
     print("Unpacking params from config.yaml please wait...")
-    model_params = params["params"]
+    use_default_params = params["use_default_params"]
+    if use_default_params:
+        print("Using default model Params")
+        model_params = params["default_params"]
+    else:
+        model_params = params["params"]
     print(f"Model Params: {model_params}")
     min_feature = params["params"]["min_feature"]
     print(f"min_feature for feature_selection: {min_feature}")
@@ -44,10 +49,14 @@ if __name__=="__main__":
     if run_pipeline:
         print("Starting dataframe ingestion and preprocessing pipline")
         df = pl.full_cleanup(data_path=data_path,columns=columns_to_skew)
+        
         print("Starting train_test split")
         train_data, test_data = pl.prepare_train_test(df,test_size)
         x_train, y_train=pl.transform_train_data(train_data)
         x_test, y_test=pl.transform_test_data(test_data)
-        print("Starting Model training and inference pipline")
+
+        print("Starting Model training pipline")
         train_mse_train , train_rmse_w_cv , train_r_sqr, train_rmsle = model.train(model_params,x_train, y_train,min_feature=min_feature)
+
+        print("Starting Model inference pipline")
         test_mse_train , test_rmse_w_cv , test_r_sqr, test_rmsle = model.evaluate(x_test, y_test)
