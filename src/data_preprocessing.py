@@ -1,6 +1,6 @@
 #imports
 from lib2to3.pgen2.pgen import DFAState
-from typing import List, Tuple
+from typing import List, Tuple , Union
 import pandas as pd
 from pandas import DataFrame
 import numpy as np
@@ -57,14 +57,14 @@ class DataPipeline:
         return df
 
     
-    def prepare_train_test(self,df:DataFrame,test_size=0.2,random_state=123,shuffle=True,save=True)-> Tuple[DataFrame,DataFrame]:
+    def prepare_train_test(self,df:DataFrame,test_size:float=0.2,random_state:int=123,shuffle:bool=True,save:bool=True)-> Tuple[DataFrame,DataFrame]:
         train_data, test_data = train_test_split(df, test_size = test_size, random_state=random_state, shuffle=shuffle)
         if save:
             train_data.to_csv("data/clean/train.csv")
             test_data.to_csv("data/clean/test.csv")
         return train_data, test_data
 
-    def transform_train_data(self,train_df:DataFrame=None,train_df_path:str=None):
+    def transform_train_data(self,train_df:DataFrame=None,train_df_path:str=None)-> Union[DataFrame,DataFrame]:
         if train_df_path:
              train_df = pd.read_csv(train_df_path)
 
@@ -125,7 +125,7 @@ class DataPipeline:
         
         return X_train
 
-    def transform_test_data(self,test_df:DataFrame=None,test_df_path:str=None):
+    def transform_test_data(self,test_df:DataFrame=None,test_df_path:str=None)->DataFrame:
         if test_df_path:
              test_df = pd.read_csv(test_df_path)
 
@@ -136,7 +136,7 @@ class DataPipeline:
         X_test = self._pre_process_test(X_test)
         return X_test, y_test
 
-    def _pre_process_test(self,X_test):
+    def _pre_process_test(self,X_test:DataFrame)->DataFrame:
     
 
         X_test = self.pl.transform(X_test).todense()

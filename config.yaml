@@ -1,21 +1,30 @@
+# Pipeline params
+download_data_set: True
+run_pipeline: True
+
 # Model Params
-use_default_params: True
+use_default_params: False
 
 params:
   model: "RandomForestRegressor"
   RFECV: False
   feature_select: True
   min_feature: 10
-  best_params:
+  model_best_params:
     n_estimators: 1200
     min_samples_split: 2
     min_samples_leaf: 4
     max_features: "auto"
     max_depth: 100
     bootstrap: True
+    random_state: 0
 
 default_params:
   model: "RandomForestRegressor"
+  RFECV: False
+  feature_select: False
+  model_default_params:
+    random_state: 0
   
 
 # Data Params
@@ -27,5 +36,3 @@ test_size: 0.2
 columns_to_skew:
   - "price"
 
-download_data_set: False
-run_pipeline: True

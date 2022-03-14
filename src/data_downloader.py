@@ -13,11 +13,11 @@ def create_folders(folder_list):
             print(f"folder already exists: {i}")
 
 
-def dataset_downloader(dataset):
+def dataset_downloader(dataset,download_path):
     api = KaggleApi()
     api.authenticate()  
     print(f"starting download of {dataset}")
-    api.dataset_download_files(dataset, path='data/raw', unzip=True)
+    api.dataset_download_files(dataset, path=download_path, unzip=True)
 
 
 

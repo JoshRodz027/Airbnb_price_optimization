@@ -4,17 +4,9 @@ from pandas import DataFrame
 from typing import Dict, List , Union
 from pprint import pprint
 
-import scipy.stats as stats
-from scipy.stats import norm
-from scipy.special import boxcox1p
-
-import statsmodels
-import statsmodels.api as sm
-#print(statsmodels.__version__)
-
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, KFold, StratifiedKFold, RandomizedSearchCV
-from sklearn.feature_selection import RFE,RFECV
+from sklearn.model_selection import cross_val_score, KFold
+from sklearn.feature_selection import RFECV
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import Ridge, RidgeCV, Lasso, LassoCV, LinearRegression, ElasticNet,  HuberRegressor 
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -67,7 +59,7 @@ class Model:
         # init your model here 
         # Regressor is used to predict continuous values like price, where classifier is used to preduict discret value like gender.
         self.models = {'DecisionTreeRegressor': DecisionTreeRegressor(),
-                  'RandomForestRegressor': RandomForestRegressor(random_state=0),
+                  'RandomForestRegressor': RandomForestRegressor(),
                   'LinearRegression': LinearRegression(),
                   'KNeighborsRegressor': KNeighborsRegressor(),
                   "GradientBoostingRegressor": GradientBoostingRegressor(),
@@ -86,38 +78,39 @@ class Model:
             
 
 
-    def train(self, params:Dict[str,Union[str,int]], X_train:DataFrame, y_train:DataFrame,min_feature:int=None)-> Union[float,float,float,float]:
-        self.model = self.models[params.pop("model")] #.pop removes the setting/dict thats left in model 
+    def train(self, params:Dict[str,Union[str,int]], X_train:DataFrame, y_train:DataFrame,min_feature:int=None) -> Union[float,float,float,float]:
+
+        self.model = self.models[params["model"]] 
 
         # extract non model related args
-        is_rfecv = (("RFECV" in params.keys()) and (params.pop("RFECV")==1))
-        is_feat_select = (("feature_select" in params.keys()) and (params.pop("feature_select")==1))
+        is_rfecv = "RFECV" in params and params["RFECV"]==1
+        is_feat_select = "feature_select" in params and params["feature_select"]==1
 
-        # RFE
+        # RFECV
         print(f"RFECV: {is_rfecv}")
         if is_rfecv:
             # process data with recursive feature elimination
             X_train = self.rfecv_process(X_train, y_train)  
 
-        
+
         if is_feat_select:
             print(f"Feature_selection_on for training data: {is_feat_select}")
             self.feature_select = True
-            if min_feature ==None:
+            if min_feature is None:
                 print("min_feature not detected. Setting default to 15")
                 min_feature = 15
             X_train = self.feature_selection_process(X_train,y_train,min_feature)
 
-        if "best_params" in params.keys():
+        if "model_best_params" in params:
             print("Applying best_params to model")
-            best_params = params["best_params"]
+            best_params = params["model_best_params"]
             self.model.set_params(**best_params)
         else:
-            self.model.set_params(**params)
+            self.model.set_params(**params["model_default_params"])
         print('Parameters currently in use: \n')
         pprint(self.model.get_params())
-       
-        
+
+        # Training the model
         self.model.fit(X_train, y_train)
         y_pred_train = self.model.predict(X_train)
         # For our case, this function should train the initialised model and return the train mse
@@ -126,11 +119,9 @@ class Model:
         # Preparing RMSLE
         rmlse = self.model_eval.rmlse(y_train,y_pred_train)
         print (f"RMSLE Value is :{rmlse} ")
- 
+
         # Preparing rmsw_w_cv
-        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-        newdf = X_train.select_dtypes(include=numerics)
-        numerical_features = newdf.columns
+        numerical_features = self._pre_process_rmse_w_cv(X_train)
         print(f"detected {len(numerical_features)} numeric features ")
         rmse_w_cv = self.model_eval.rmse_cv(self.model,numerical_features,X_train,y_train)
         print(f"rmse_w_cv score is :{rmse_w_cv}")
@@ -150,8 +141,6 @@ class Model:
         print("rfecv on training data")
         X_train = self.rfecv.transform(X_train)
         return X_train
-
-
 
     def evaluate(self, X_test:DataFrame, y_test:DataFrame) -> Union[float,float,float,float]:
         #For RFE
@@ -173,9 +162,7 @@ class Model:
 
 
         # Preparing rmsw_w_cv
-        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-        newdf = X_test.select_dtypes(include=numerics)
-        numerical_features = newdf.columns
+        numerical_features = self._pre_process_rmse_w_cv(X_test)
         print(f"detected {len(numerical_features)} numeric features ")
         rmse_w_cv = self.model_eval.rmse_cv(self.model,numerical_features,X_test,y_test)
         print(f"rmse_w_cv score is :{rmse_w_cv}")
@@ -188,7 +175,7 @@ class Model:
         return mse_test,rmse_w_cv, r_sqr, rmlse
     
 
-    def feature_selection_process(self,X_train:DataFrame,y_train:DataFrame,min_feature:int)->DataFrame:
+    def feature_selection_process(self,X_train:DataFrame,y_train:DataFrame,min_feature:int) -> DataFrame:
         feat_ranks = {}
         feature_names = X_train.columns
         print(f"Fitting model {self.model} for feature selection of minimum {min_feature} features")
@@ -200,24 +187,25 @@ class Model:
         self.features_to_remove = sorted_keys[min_feature:]
         print(f"number of features to drop {len(self.features_to_remove)}")
         print("Dropping features now..")
-        X_train_reduced = X_train.drop(self.features_to_remove, axis=1)
-        return X_train_reduced
+        return X_train.drop(self.features_to_remove, axis=1)
 
 
     @staticmethod
-    def ranking(ranks:dict, names:List[str], order=1)->dict:
+    def ranking(ranks:dict, names:List[str], order:int=1)->dict:
         minmax = MinMaxScaler()
         ranks = minmax.fit_transform(order*np.array([ranks]).T).T[0]
         ranks = map(lambda x: round(x,2), ranks)
         return dict(zip(names, ranks))
 
     @staticmethod
-    def dict_sorter(rank_dict:dict)->Union[dict, List[str]]:
+    def dict_sorter(rank_dict:dict) -> Union[dict, List[str]]:
         sorted_keys  = sorted(rank_dict, key=rank_dict.get, reverse=True)
         print(f"Top 10 features {sorted_keys[:10]}")
-        sorted_dict = {}
-        for w in sorted_keys:
-            sorted_dict[w] = rank_dict[w]
+        sorted_dict = {w: rank_dict[w] for w in sorted_keys}
         return sorted_dict , sorted_keys
 
-
+    @staticmethod
+    def _pre_process_rmse_w_cv(X_train:DataFrame):
+        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+        newdf = X_train.select_dtypes(include=numerics)
+        return newdf.columns

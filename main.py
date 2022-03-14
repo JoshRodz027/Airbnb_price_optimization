@@ -39,11 +39,12 @@ if __name__=="__main__":
     to_download = params["download_data_set"]
     print(f"Download data set from kaggle set to {to_download}")
     run_pipeline = params["run_pipeline"]
+    print(f"Run full pipeline set to {run_pipeline}")
 
     if to_download:
         folder = [DIR_RAW,DIR_CLEAN]
         create_folders(folder)
-        dataset_downloader(data_set)
+        dataset_downloader(data_set,folder[0])
         print("Download Completed")
 
     if run_pipeline:
@@ -56,7 +57,7 @@ if __name__=="__main__":
         x_test, y_test=pl.transform_test_data(test_data)
 
         print("Starting Model training pipline")
-        train_mse_train , train_rmse_w_cv , train_r_sqr, train_rmsle = model.train(model_params,x_train, y_train,min_feature=min_feature)
+        model.train(model_params,x_train, y_train,min_feature=min_feature)
 
         print("Starting Model inference pipline")
-        test_mse_train , test_rmse_w_cv , test_r_sqr, test_rmsle = model.evaluate(x_test, y_test)
+        model.evaluate(x_test, y_test)
