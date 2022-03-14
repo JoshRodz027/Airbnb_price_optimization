@@ -36,4 +36,4 @@ if __name__ =="__main__":
     params = vars(args)
     dataset=params["data_set"]
     
-    dataset_downloader(dataset)
+    dataset_downloader(dataset,DIR_RAW)

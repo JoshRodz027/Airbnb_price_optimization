@@ -35,3 +35,6 @@ test_size: 0.2
 columns_to_skew:
   - "price"
 
+
+# Pytest Config
+delete_test_folder: True
