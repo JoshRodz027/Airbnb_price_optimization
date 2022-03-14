@@ -80,11 +80,11 @@ class Model:
 
     def train(self, params:Dict[str,Union[str,int]], X_train:DataFrame, y_train:DataFrame,min_feature:int=None) -> Union[float,float,float,float]:
 
-        self.model = self.models[params["model"]] 
+        self.model = self.models[params.pop("model")] 
 
         # extract non model related args
-        is_rfecv = "RFECV" in params and params["RFECV"]==1
-        is_feat_select = "feature_select" in params and params["feature_select"]==1
+        is_rfecv = "RFECV" in params and params.pop("RFECV")==1
+        is_feat_select = "feature_select" in params and params.pop("feature_select")==1
 
         # RFECV
         print(f"RFECV: {is_rfecv}")
@@ -101,16 +101,20 @@ class Model:
                 min_feature = 15
             X_train = self.feature_selection_process(X_train,y_train,min_feature)
 
-        if "model_best_params" in params:
-            print("Applying best_params to model")
-            best_params = params["model_best_params"]
+        if "user_params" in params:
+            print("Applying User model_params to model")
+            best_params = params["user_params"]
             self.model.set_params(**best_params)
         else:
-            self.model.set_params(**params["model_default_params"])
+            print("Using default Model_Params with random state =0")
+            if "random_state" not in params:
+                params["random_state"]=0
+            self.model.set_params(**params)
         print('Parameters currently in use: \n')
         pprint(self.model.get_params())
 
         # Training the model
+        print("Training model, please wait...")
         self.model.fit(X_train, y_train)
         y_pred_train = self.model.predict(X_train)
         # For our case, this function should train the initialised model and return the train mse

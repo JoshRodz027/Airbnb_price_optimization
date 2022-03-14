@@ -12,33 +12,33 @@ model = Model()
 if __name__=="__main__":
 
     with open(r"C:\Users\rodzi\Documents\My projects\Dyson\Dyson_test\config.yaml") as file:
-        params = yaml.load(file, Loader=yaml.FullLoader)
+        params_config = yaml.load(file, Loader=yaml.FullLoader)
     
     print("Unpacking params from config.yaml please wait...")
-    use_default_params = params["use_default_params"]
+    use_default_params = params_config["use_default_params"]
     if use_default_params:
         print("Using default model Params")
-        model_params = params["default_params"]
+        model_params = params_config["default_params"]
     else:
-        model_params = params["params"]
+        model_params = params_config["params"]
     print(f"Model Params: {model_params}")
-    min_feature = params["params"]["min_feature"]
+    min_feature = params_config["params"]["min_feature"]
     print(f"min_feature for feature_selection: {min_feature}")
-    DIR_RAW = params["DIR_RAW"]
+    DIR_RAW = params_config["DIR_RAW"]
     print(f"Raw data directory: {DIR_RAW}")
-    DIR_CLEAN = params["DIR_CLEAN"]
+    DIR_CLEAN = params_config["DIR_CLEAN"]
     print(f"Clean data directory: {DIR_CLEAN}")
-    data_path = params["data_path"]
+    data_path = params_config["data_path"]
     print(f"Data paths to read from {data_path}")
-    data_set = params["data_set"]
+    data_set = params_config["data_set"]
     print(f"Data set to download from {data_set}")
-    columns_to_skew = params["columns_to_skew"]
+    columns_to_skew = params_config["columns_to_skew"]
     print(f"Columns to skew for data pre-processing {columns_to_skew}")
-    test_size = params["test_size"]
+    test_size = params_config["test_size"]
     print(f"Test size for train test split: {test_size}") 
-    to_download = params["download_data_set"]
+    to_download = params_config["download_data_set"]
     print(f"Download data set from kaggle set to {to_download}")
-    run_pipeline = params["run_pipeline"]
+    run_pipeline = params_config["run_pipeline"]
     print(f"Run full pipeline set to {run_pipeline}")
 
     if to_download:

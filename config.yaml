@@ -9,22 +9,21 @@ params:
   model: "RandomForestRegressor"
   RFECV: False
   feature_select: True
-  min_feature: 10
-  model_best_params:
+  min_feature: 10 # int or None
+  user_params: # User input params for model - currently best params
     n_estimators: 1200
     min_samples_split: 2
     min_samples_leaf: 4
     max_features: "auto"
     max_depth: 100
     bootstrap: True
-    random_state: 0
+    random_state: 0 # Only for randomForest
 
-default_params:
+default_params: # defaults to this parms 
   model: "RandomForestRegressor"
   RFECV: False
   feature_select: False
-  model_default_params:
-    random_state: 0
+  random_state: 0
   
 
 # Data Params
