@@ -14,6 +14,7 @@ def create_folders(folder_list):
 
 
 def dataset_downloader(dataset,download_path):
+    #to authenticate https://www.kaggle.com/docs/api
     api = KaggleApi()
     api.authenticate()  
     print(f"starting download of {dataset}")

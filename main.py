@@ -21,9 +21,12 @@ if __name__=="__main__":
         model_params = params_config["default_params"]
     else:
         model_params = params_config["params"]
+        min_feature = model_params["min_feature"]
+        print(f"min_feature for feature_selection using custom params: {min_feature}")
+    
+
     print(f"Model Params: {model_params}")
-    min_feature = params_config["params"]["min_feature"]
-    print(f"min_feature for feature_selection: {min_feature}")
+    
     DIR_RAW = params_config["DIR_RAW"]
     print(f"Raw data directory: {DIR_RAW}")
     DIR_CLEAN = params_config["DIR_CLEAN"]
